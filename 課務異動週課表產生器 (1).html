@@ -1,0 +1,1244 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>課務異動週課表產生器</title>
+<style>
+:root{
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  color-scheme:light;
+  --bg:#f4f2ec; --panel:#fffdf8; --ink:#1f2a2e; --muted:#667379; --line:#d9d4c7;
+  --field:#ffffff; --accent:#0f6b63; --accent-ink:#ffffff; --accent-soft:#e3f1ee;
+  --sub:#0f766e; --sub-bg:#e3f3f0; --swap:#b45309; --swap-bg:#fdf0dc;
+  --hr:#5b3fa6; --hr-bg:#ece6fa; --lunch:#0b6a8f; --lunch-bg:#dcf0f8; --danger:#b3261e;
+  --shadow:0 1px 2px rgba(31,42,46,.06),0 8px 24px rgba(31,42,46,.06);
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#12181a; --panel:#1a2225; --ink:#e8eeee; --muted:#93a1a5; --line:#2e3a3e;
+    --field:#121a1c; --accent:#4fc3b6; --accent-ink:#0b1b19; --accent-soft:#16302d;
+    --sub:#5fd0c3; --sub-bg:#17302d; --swap:#f0b45e; --swap-bg:#35291a;
+    --hr:#b9a2f5; --hr-bg:#2a2340; --lunch:#6cc5ea; --lunch-bg:#162f3b; --danger:#ff8a80;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#12181a; --panel:#1a2225; --ink:#e8eeee; --muted:#93a1a5; --line:#2e3a3e;
+  --field:#121a1c; --accent:#4fc3b6; --accent-ink:#0b1b19; --accent-soft:#16302d;
+  --sub:#5fd0c3; --sub-bg:#17302d; --swap:#f0b45e; --swap-bg:#35291a;
+  --hr:#b9a2f5; --hr-bg:#2a2340; --lunch:#6cc5ea; --lunch-bg:#162f3b; --danger:#ff8a80;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.3);
+}
+*,*::before,*::after{box-sizing:inherit}
+[hidden]{display:none!important}
+html,body{margin:0}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei","Heiti TC",system-ui,-apple-system,"Segoe UI",sans-serif;
+  font-size:15px; line-height:1.55; -webkit-font-smoothing:antialiased;
+}
+.page{max-width:1560px;margin:0 auto;padding:20px 20px 48px}
+.topbar{display:flex;gap:16px;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;margin-bottom:18px}
+.topbar h1{font-size:22px;margin:0;letter-spacing:.02em}
+.topbar p{margin:2px 0 0;color:var(--muted);font-size:13.5px}
+.actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.actions .hint-top{color:var(--muted);font-size:12.5px}
+.layout{display:grid;gap:20px;grid-template-columns:minmax(0,1fr)}
+@media (min-width:1040px){.layout{grid-template-columns:minmax(340px,400px) minmax(0,1fr);align-items:start}}
+.controls{display:grid;gap:16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 16px 18px;box-shadow:var(--shadow)}
+.card h2{font-size:15px;margin:0 0 12px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.card h2 small{font-weight:400;color:var(--muted);font-size:12.5px}
+details.card{padding:0}
+details.card>summary{list-style:none;cursor:pointer;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:8px;border-radius:14px}
+details.card>summary::-webkit-details-marker{display:none}
+details.card>summary h2{margin:0;font-size:15px;flex:1}
+details.card>summary::after{content:"▸";color:var(--muted);transition:transform .15s}
+details.card[open]>summary::after{transform:rotate(90deg)}
+details.card>.body{padding:0 16px 18px}
+.note{color:var(--muted);font-size:13px;margin:0 0 10px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.grid2.one{grid-template-columns:1fr}
+.field{display:flex;flex-direction:column;gap:4px;margin-bottom:10px;min-width:0}
+.field>span{font-size:12.5px;color:var(--muted)}
+.grid2 .field{margin-bottom:0}
+input[type=text],input[type=date],select,textarea{
+  width:100%;font:inherit;color:var(--ink);background:var(--field);
+  border:1px solid var(--line);border-radius:9px;padding:8px 10px;min-height:40px;
+}
+textarea{resize:vertical;font-size:13px;line-height:1.45;min-height:90px}
+input:focus,select:focus,textarea:focus,button:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.btn{
+  font:inherit;font-weight:600;border-radius:9px;border:1px solid var(--line);
+  background:var(--field);color:var(--ink);padding:8px 14px;min-height:40px;cursor:pointer;
+}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{filter:brightness(1.07)}
+.btn.small{min-height:32px;padding:3px 11px;font-size:13px;font-weight:500}
+.btn.danger{color:var(--danger)}
+.link{font:inherit;font-size:12.5px;color:var(--accent);background:none;border:0;padding:0;cursor:pointer;text-decoration:underline}
+.seg{display:grid;grid-template-columns:repeat(4,1fr);background:var(--field);border:1px solid var(--line);border-radius:10px;padding:3px;margin-bottom:10px;gap:2px}
+.seg button{font:inherit;font-size:13.5px;font-weight:600;border:0;background:none;color:var(--muted);padding:8px 2px;border-radius:8px;cursor:pointer;white-space:nowrap}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.dbline{font-size:12.5px;color:var(--muted);margin:0 0 12px;line-height:1.5}
+.gtitle{font-size:12.5px;font-weight:700;color:var(--accent);margin:2px 0 8px;letter-spacing:.04em}
+.sep{border:0;border-top:1px dashed var(--line);margin:14px 0}
+.check{display:flex;gap:8px;align-items:flex-start;font-size:14px;margin:4px 0 10px;cursor:pointer}
+.check input{margin-top:5px;accent-color:var(--accent)}
+.other-box{background:var(--accent-soft);border-radius:10px;padding:10px 10px 2px;margin-bottom:10px}
+.hint{font-size:12.5px;margin:0 0 8px;display:grid;gap:3px}
+.hint:empty{display:none}
+.hint .ok{color:var(--accent)} .hint .warn{color:var(--swap)} .hint .mute{color:var(--muted)}
+.err{color:var(--danger);font-size:13px;min-height:1.2em;margin:2px 0 8px}
+.row-btns{display:flex;gap:8px;flex-wrap:wrap}
+.import-box{margin-top:10px;border:1px solid var(--accent);background:var(--accent-soft);border-radius:10px;padding:10px 12px;font-size:13.5px}
+.import-box p{margin:0 0 8px}
+.chk-line{display:flex;gap:8px;align-items:center;font-size:13.5px;margin-bottom:10px}
+.chk-line input{accent-color:var(--accent)}
+.sub-h{font-size:13px;font-weight:700;margin:14px 0 6px}
+
+.mrow{border:1px solid var(--line);border-radius:10px;padding:8px 8px 4px;margin-bottom:8px;background:var(--field)}
+.mrow-h{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;font-weight:700;color:var(--swap);margin-bottom:6px}
+.mrow .grid2{margin-bottom:6px}
+.mrow input,.mrow select{min-height:36px;padding:6px 8px;font-size:14px}
+.mrow .arrow{font-size:12px;color:var(--muted);margin:2px 0 4px}
+/* list */
+.list{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.list li{border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--field);font-size:13.5px}
+.li-top{display:flex;gap:8px;align-items:center;justify-content:space-between}
+.li-main{min-width:0}
+.pill{display:inline-block;font-size:11.5px;font-weight:700;border-radius:999px;padding:1px 8px;margin-right:6px}
+.pill.sub{color:var(--sub);background:var(--sub-bg)}
+.pill.swap{color:var(--swap);background:var(--swap-bg)}
+.pill.hr{color:var(--hr);background:var(--hr-bg)}
+.pill.lunch{color:var(--lunch);background:var(--lunch-bg)}
+.pill.multi{color:var(--swap);background:var(--swap-bg)}
+.li-sub{color:var(--muted);font-size:12.5px;margin-top:2px}
+.li-btns{display:flex;gap:6px;flex:none}
+.empty-note{color:var(--muted);font-size:13.5px;margin:0 0 10px}
+
+/* preview */
+.scroll{overflow-x:auto;padding-bottom:4px}
+.sheet{
+  --ink:#1c2326;--muted:#5d6a6f;--line:#8f9a9e;--soft:#eef1f1;
+  --sub:#0f6b63;--sub-bg:#dff2ee;--swap:#9a4508;--swap-bg:#fbebd3;
+  --hr:#5b3fa6;--hr-bg:#ece6fa;--lunch:#0b6a8f;--lunch-bg:#dcf0f8;--paper:#ffffff;
+  background:var(--paper);color:var(--ink);border-radius:12px;padding:22px 24px 18px;
+  min-width:800px;box-shadow:var(--shadow);
+}
+.sheet-school{text-align:center;font-size:15px;font-weight:600;letter-spacing:.12em}
+.sheet-school.ph{color:var(--muted);font-weight:400}
+.sheet h2{margin:2px 0 8px;display:block;text-align:center;font-size:22px;letter-spacing:.2em}
+.meta{display:flex;flex-wrap:wrap;gap:4px 22px;justify-content:center;font-size:13px;color:var(--ink);margin-bottom:12px}
+.meta b{font-weight:600}
+.tt{width:100%;border-collapse:collapse;table-layout:fixed;font-size:12.5px}
+.tt th,.tt td{border:1px solid var(--line);vertical-align:top;padding:4px}
+.tt thead th{background:var(--soft);padding:6px 4px;text-align:center;font-size:14px}
+.tt thead .d{display:block;font-weight:400;color:var(--muted);font-size:12px}
+.tt .pn{width:58px;text-align:center;background:var(--soft);vertical-align:middle;font-weight:600;font-size:13px;line-height:1.3}
+.tt td{height:72px}
+.tt tr.hr-row td{height:40px}
+.tt tr.lunch td{height:34px;background:#f7f8f8}
+.it{border-left:3px solid var(--c);background:var(--cb);border-radius:3px;padding:3px 5px 4px;margin-bottom:4px}
+.it:last-child{margin-bottom:0}
+.it.sub{--c:var(--sub);--cb:var(--sub-bg)}
+.it.swap{--c:var(--swap);--cb:var(--swap-bg)}
+.it.hr{--c:var(--hr);--cb:var(--hr-bg)}
+.it.lunch{--c:var(--lunch);--cb:var(--lunch-bg)}
+.it-top{display:flex;gap:6px;align-items:baseline;flex-wrap:wrap;margin-bottom:1px}
+.badge{font-size:11px;font-weight:700;color:var(--c)}
+.note-s{font-size:11px;color:var(--muted)}
+.ln{display:flex;gap:5px;align-items:baseline;line-height:1.45}
+.tg{flex:none;font-size:10.5px;font-weight:700;width:16px;text-align:center;border-radius:3px;background:rgba(0,0,0,.1);color:var(--ink)}
+.tg.a{background:var(--c);color:#fff}
+.ln .v{display:flex;flex-wrap:wrap;gap:0 7px;min-width:0}
+.ln .v span{white-space:nowrap}
+.empty{color:var(--muted);font-style:italic}
+mark{background:none;color:var(--c);font-weight:700;text-decoration:underline;text-underline-offset:2px}
+.legend{margin-top:10px;font-size:12px;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 16px;align-items:center}
+.sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+.sw.sub{background:var(--sub)} .sw.swap{background:var(--swap)} .sw.hr{background:var(--hr)} .sw.lunch{background:var(--lunch)}
+
+/* toast */
+.toast{
+  position:fixed;left:50%;transform:translateX(-50%) translateY(20px);bottom:calc(20px + env(safe-area-inset-bottom,0px));
+  background:var(--ink);color:var(--bg);padding:9px 14px;border-radius:10px;font-size:13.5px;
+  display:flex;gap:12px;align-items:center;opacity:0;pointer-events:none;transition:.2s;z-index:10;max-width:92vw
+}
+.toast.show{opacity:1;transform:translateX(-50%);pointer-events:auto}
+.toast button{font:inherit;font-weight:700;background:none;border:0;color:inherit;text-decoration:underline;cursor:pointer;padding:0}
+
+@media print{
+  :root{padding:0}
+  @page{size:A4 landscape;margin:10mm}
+  html,body{background:#fff!important}
+  .topbar,.controls,.toast,.no-print{display:none!important}
+  .page{padding:0;max-width:none}
+  .layout{display:block}
+  .scroll{overflow:visible}
+  .sheet{min-width:0;box-shadow:none;border-radius:0;padding:0}
+  .tt td{height:14mm}
+  .tt tr.hr-row td{height:11mm}
+  .tt tr.lunch td{height:9mm}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="topbar">
+    <div>
+      <h1>課務異動週課表產生器</h1>
+      <p>輸入課堂代課、調課、導師代課、午休代課，自動排成一週異動課表；沒有異動的格子保持空白。</p>
+    </div>
+    <div class="actions">
+      <span class="hint-top">也可按 Ctrl / ⌘ + P</span>
+      <button class="btn primary" id="btn-print" type="button">列印 / 存成 PDF</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="controls">
+
+      <section class="card">
+        <h2>表頭設定</h2>
+        <label class="field"><span>學校名稱</span><input type="text" id="s-school" placeholder="例：○○市○○國民小學"></label>
+        <div class="grid2">
+          <label class="field"><span>異動週別（選該週任一天）</span><input type="date" id="s-anchor"></label>
+          <label class="field"><span>製表日期（預設今天）</span><input type="date" id="s-made"></label>
+        </div>
+        <div class="grid2" style="margin-bottom:0">
+          <label class="field"><span>每日節數</span>
+            <select id="s-periods"><option>5</option><option>6</option><option selected>7</option><option>8</option></select>
+          </label>
+          <label class="field"><span>製表人（選填）</span><input type="text" id="s-maker" placeholder="例：教學組長"></label>
+        </div>
+      </section>
+
+      <section class="card" id="addCard">
+        <h2 id="addTitle">新增異動</h2>
+        <div class="seg" role="group" aria-label="異動類型">
+          <button type="button" data-t="sub" aria-pressed="true">課堂代課</button>
+          <button type="button" data-t="swap" aria-pressed="false">調課</button>
+          <button type="button" data-t="hr" aria-pressed="false">導師代課</button>
+          <button type="button" data-t="lunch" aria-pressed="false">午休代課</button>
+        </div>
+        <div class="dbline" id="dbLine"></div>
+        <label class="field" id="modeRow" hidden><span>調課方式</span>
+          <select id="f-mode"><option value="two">兩節互調／調到空堂</option><option value="multi">多角調課（三節以上輪調）</option></select>
+        </label>
+
+        <div class="gtitle" id="gTitle">異動節次與課程</div>
+        <div class="grid2" id="rowDP">
+          <label class="field"><span>星期</span><select id="f-day"></select></label>
+          <label class="field" id="fldPeriod"><span>節次</span><select id="f-period"></select></label>
+        </div>
+        <div class="grid2" id="rowCS">
+          <label class="field"><span id="lblCls">班級</span><input type="text" id="f-cls" list="dl-cls" placeholder="例：三年甲班" autocomplete="off"></label>
+          <label class="field" id="fldSubj"><span>科目</span><input type="text" id="f-subj" list="dl-subj" placeholder="例：數學" autocomplete="off"></label>
+        </div>
+        <label class="field" id="fldFrom"><span id="lblFrom">原授課教師</span><input type="text" id="f-from" list="dl-from" placeholder="例：王大明" autocomplete="off"></label>
+        <label class="field" id="fldTo"><span id="lblTo">代課教師</span><input type="text" id="f-to" list="dl-to" placeholder="例：李小華" autocomplete="off"></label>
+
+        <div class="only-swap" hidden>
+         <div id="multiWay" hidden>
+           <p class="note">每一列＝一節要移動的課：填它原本的時段，以及要調到哪個時段。三角調課可按「依序輪調」自動接成一圈。</p>
+           <div id="mrows"></div>
+           <div class="row-btns" style="margin-bottom:10px">
+             <button class="btn small" id="m-add" type="button">＋ 增加一列</button>
+             <button class="btn small" id="m-cycle" type="button">依序輪調（自動填目的時段）</button>
+           </div>
+         </div>
+         <div id="twoWay">
+          <hr class="sep">
+          <div class="gtitle">調整後時段</div>
+          <div class="grid2">
+            <label class="field"><span>星期</span><select id="f-nday"></select></label>
+            <label class="field"><span>節次</span><select id="f-nperiod"></select></label>
+          </div>
+          <label class="check" style="margin-top:10px"><input type="checkbox" id="f-other"><span>新時段原本有課，雙方對調<br><small style="color:var(--muted)">未勾選＝調到空堂</small></span></label>
+          <div class="other-box" id="otherBox" hidden>
+            <div class="gtitle">新時段原有課程（對調後移到原時段）</div>
+            <div class="grid2">
+              <label class="field"><span>班級</span><input type="text" id="f-ocls" list="dl-ocls" autocomplete="off"></label>
+              <label class="field"><span>科目</span><input type="text" id="f-osubj" list="dl-subj" autocomplete="off"></label>
+            </div>
+            <label class="field"><span>授課教師</span><input type="text" id="f-otc" list="dl-tc" autocomplete="off"></label>
+          </div>
+         </div>
+        </div>
+
+        <div class="hint" id="hint"></div>
+        <div class="err" id="err" role="alert"></div>
+        <div class="row-btns">
+          <button class="btn primary" id="btn-add" type="button">新增異動</button>
+          <button class="btn" id="btn-cancel" type="button" hidden>取消編輯</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>異動清單 <small id="count"></small></h2>
+        <div id="emptyBox">
+          <p class="empty-note">還沒有異動資料。可以先載入範例，看看排版與自動帶出的效果。</p>
+          <button class="btn small" id="btn-sample" type="button">載入範例資料</button>
+        </div>
+        <ul class="list" id="list"></ul>
+        <div style="margin-top:12px" id="clearWrap" hidden>
+          <button class="btn small danger" id="btn-clear" type="button">清除全部異動</button>
+        </div>
+      </section>
+
+      <details class="card" id="dbCard">
+        <summary><h2>原課表資料庫（選填） <small id="dbStat"></small></h2></summary>
+        <div class="body">
+          <p class="note">不匯入也能正常使用。匯入學校原本的課表後，選好星期、節次、班級，就會自動帶出科目與授課教師，並建議「該節沒課」的代課人選，還會提醒教師衝堂。</p>
+          <label class="field"><span>課表資料（可從 Excel 直接複製貼上，或貼 CSV）</span>
+            <textarea id="db-text" rows="6" placeholder="星期,節次,班級,科目,教師&#10;週一,1,三年甲班,國語,王大明"></textarea>
+          </label>
+          <div class="row-btns">
+            <button class="btn small primary" id="db-load" type="button">載入貼上的內容</button>
+            <button class="btn small" id="db-file-btn" type="button">選擇 CSV 檔</button>
+            <button class="btn small" id="db-tpl" type="button">填入範本格式</button>
+          </div>
+          <input type="file" id="db-file" accept=".csv,.tsv,.txt,text/csv,text/plain" hidden>
+          <p class="note" style="margin-top:8px">欄位：星期（週一或一或 1）、節次、班級、科目、教師。再次載入會取代原有課表；檔案若出現亂碼，請直接貼上內容。</p>
+
+          <div class="sub-h">班級導師對照（選填）</div>
+          <p class="note">用於「導師代課」與「午休代課」自動帶出原導師／原午休教師。每行：班級,導師</p>
+          <textarea id="db-roster" rows="4" placeholder="班級,導師&#10;三年甲班,王大明"></textarea>
+          <div class="row-btns" style="margin-top:8px">
+            <button class="btn small primary" id="roster-load" type="button">載入導師對照</button>
+            <button class="btn small danger" id="db-clear" type="button">清除課表資料庫</button>
+          </div>
+        </div>
+      </details>
+
+      <details class="card" id="exCard">
+        <summary><h2>暫存檔（匯出／匯入）</h2></summary>
+        <div class="body">
+          <p class="note">把目前的異動資料存成暫存檔，之後可以匯入繼續編輯，也能在不同電腦之間搬移。</p>
+          <label class="chk-line"><input type="checkbox" id="ex-db" checked>包含原課表資料庫與導師對照</label>
+          <div class="row-btns">
+            <button class="btn small primary" id="ex-dl" type="button">下載暫存檔</button>
+            <button class="btn small" id="ex-copy" type="button">複製暫存內容</button>
+          </div>
+          <div class="sub-h">匯入</div>
+          <div class="row-btns" style="margin-bottom:8px">
+            <button class="btn small" id="in-file-btn" type="button">選擇暫存檔</button>
+          </div>
+          <input type="file" id="in-file" accept=".json,.txt,application/json,text/plain" hidden>
+          <label class="field"><span>或貼上暫存內容</span><textarea id="ex-text" rows="5" placeholder="{ &quot;app&quot;: &quot;class-change-tool&quot;, ... }"></textarea></label>
+          <button class="btn small" id="in-paste" type="button">匯入貼上的內容</button>
+          <div class="import-box" id="importBox" hidden>
+            <p id="importSum"></p>
+            <div class="row-btns">
+              <button class="btn small primary" id="im-replace" type="button">取代目前資料</button>
+              <button class="btn small" id="im-merge" type="button">合併（加入異動）</button>
+              <button class="btn small" id="im-cancel" type="button">取消</button>
+            </div>
+          </div>
+          <p class="note" style="margin-top:10px">若按「下載」沒有反應（例如在預覽視窗中），請用「複製暫存內容」，再貼到記事本存檔。</p>
+        </div>
+      </details>
+    </aside>
+
+    <section class="preview">
+      <div class="scroll"><article class="sheet" id="sheet" aria-label="課務異動週課表預覽"></article></div>
+    </section>
+  </main>
+</div>
+
+<datalist id="dl-cls"></datalist>
+<datalist id="dl-ocls"></datalist>
+<datalist id="dl-subj"></datalist>
+<datalist id="dl-from"></datalist>
+<datalist id="dl-to"></datalist>
+<datalist id="dl-tc"></datalist>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+  'use strict';
+  var DAYS=['週一','週二','週三','週四','週五'];
+  var SUBJECTS=['國語','數學','英語','社會','自然科學','健康教育','體育','音樂','美勞','藝術','綜合活動','本土語','資訊','彈性課程','閱讀'];
+  var KEY='class-change-tool-v1';
+  var LABEL={sub:'代課',swap:'調課',multi:'多角調課',hr:'導師代課',lunch:'午休代課'};
+  var CFG={
+    sub:  {period:1,subj:1,to:1,swap:0,g:'異動節次與課程',cls:'班級',from:'原授課教師',to:'代課教師'},
+    swap: {period:1,subj:1,to:0,swap:1,g:'原時段與課程',cls:'班級',from:'授課教師',to:''},
+    hr:   {period:0,subj:0,to:1,swap:0,g:'導師代課（指定星期）',cls:'年級（班級）',from:'前：原導師',to:'後：代課導師'},
+    lunch:{period:0,subj:0,to:1,swap:0,g:'午休代課（指定星期）',cls:'年級（班級）',from:'前：原午休教師',to:'後：代課午休教師'}
+  };
+
+  function $(s,r){return (r||document).querySelector(s)}
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+  function pad(n){return String(n).padStart(2,'0')}
+  function toISO(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())}
+  function parseISO(s){var p=String(s).split('-').map(Number);return new Date(p[0],p[1]-1,p[2])}
+  function mondayOf(d){
+    var x=new Date(d.getFullYear(),d.getMonth(),d.getDate()), wd=x.getDay(), diff;
+    if(wd===6)diff=2; else if(wd===0)diff=1; else diff=1-wd;
+    x.setDate(x.getDate()+diff); return x;
+  }
+  function roc(d){return '民國'+(d.getFullYear()-1911)+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日'}
+  function str(v){return String(v==null?'':v).trim().slice(0,60)}
+  function int(v,min,max){var n=Math.round(+v);return (isFinite(n)&&n>=min&&n<=max)?n:null}
+  function uniq(a){var s={},o=[];a.forEach(function(v){if(v&&!s[v]){s[v]=1;o.push(v)}});return o}
+  function isDateStr(s){return /^\d{4}-\d{2}-\d{2}$/.test(String(s||''))}
+
+  /* ---------- sanitizers ---------- */
+  function cleanLesson(l){
+    if(!l)return null;
+    var d=int(l.d,0,4),p=int(l.p,1,8),c=str(l.c),t=str(l.t),s=str(l.s);
+    if(d==null||p==null||!c||!t)return null;
+    return {d:d,p:p,c:c,s:s,t:t};
+  }
+  function cleanRoster(r){
+    var o={};
+    if(r&&typeof r==='object'){Object.keys(r).forEach(function(k){var c=str(k),t=str(r[k]);if(c&&t)o[c]=t})}
+    return o;
+  }
+  function sanitizeRecord(r){
+    if(!r||!LABEL[r.type])return null;
+    if(r.type==='multi'){
+      if(!Array.isArray(r.moves)||r.moves.length<3||r.moves.length>8)return null;
+      var mv=r.moves.map(function(m){
+        var d=int(m.day,0,4),p=int(m.period,1,8),nd=int(m.nDay,0,4),np=int(m.nPeriod,1,8),c=str(m.cls),sj=str(m.subj),t=str(m.from);
+        if(d==null||p==null||nd==null||np==null||!c||!sj||!t)return null;
+        return {day:d,period:p,cls:c,subj:sj,from:t,nDay:nd,nPeriod:np};
+      });
+      if(mv.some(function(m){return !m}))return null;
+      return {type:'multi',moves:mv};
+    }
+    var day=int(r.day,0,4),cls=str(r.cls),from=str(r.from);
+    if(day==null||!cls||!from)return null;
+    if(r.type==='sub'){
+      var p=int(r.period,1,8),subj=str(r.subj),to=str(r.to);
+      if(p==null||!subj||!to)return null;
+      return {type:'sub',day:day,period:p,cls:cls,subj:subj,from:from,to:to};
+    }
+    if(r.type==='swap'){
+      var p2=int(r.period,1,8),nd=int(r.nDay,0,4),np=int(r.nPeriod,1,8),subj2=str(r.subj);
+      if(p2==null||nd==null||np==null||!subj2)return null;
+      var has=!!r.hasOther,oc=str(r.oCls),os=str(r.oSubj),ot=str(r.oTeacher);
+      if(has&&(!oc||!os||!ot))return null;
+      return {type:'swap',day:day,period:p2,cls:cls,subj:subj2,from:from,nDay:nd,nPeriod:np,hasOther:has,
+        oCls:has?oc:'',oSubj:has?os:'',oTeacher:has?ot:''};
+    }
+    var to2=str(r.to); if(!to2)return null;
+    return {type:r.type,day:day,cls:cls,from:from,to:to2};
+  }
+  function pickSettings(s){
+    var n=int(s.periods,5,8);
+    return {school:str(s.school),maker:str(s.maker),anchor:isDateStr(s.anchor)?s.anchor:toISO(new Date()),
+      made:isDateStr(s.made)?s.made:'',periods:n==null?7:n};
+  }
+
+  /* ---------- state ---------- */
+  var DEF={school:'',maker:'',anchor:toISO(new Date()),made:'',periods:7};
+  var S={settings:Object.assign({},DEF),records:[],seq:1,db:{lessons:[],roster:{}}};
+  try{
+    var raw=localStorage.getItem(KEY);
+    if(raw){
+      var p0=JSON.parse(raw);
+      if(p0&&p0.settings&&Array.isArray(p0.records)){
+        S.settings=pickSettings(p0.settings);
+        S.records=p0.records.map(sanitizeRecord).filter(Boolean);
+        S.records.forEach(function(r,i){r.id=i+1});
+        S.seq=S.records.length+1;
+        if(p0.db&&Array.isArray(p0.db.lessons)){
+          S.db={lessons:p0.db.lessons.map(cleanLesson).filter(Boolean),roster:cleanRoster(p0.db.roster)};
+        }
+      }
+    }
+  }catch(e){}
+  function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+
+  var curType='sub', curMode='two', editingId=null, lastDeleted=null, clearArmed=false, clearT=null, pending=null;
+
+  /* ---------- helpers ---------- */
+  function weekDates(){
+    var mon=mondayOf(parseISO(S.settings.anchor||toISO(new Date())));
+    var arr=[];for(var i=0;i<5;i++){var d=new Date(mon);d.setDate(mon.getDate()+i);arr.push(d)}
+    return arr;
+  }
+  function slotName(d,p){return DAYS[d]+'第'+p+'節'}
+  function maxUsed(){
+    var m=0;S.records.forEach(function(r){m=Math.max(m,r.period||0,r.nPeriod||0);(r.moves||[]).forEach(function(v){m=Math.max(m,v.period,v.nPeriod)})});return m;
+  }
+  function rowCount(){return Math.max(+S.settings.periods||7,maxUsed())}
+  function sorted(){
+    function rd(r){return r.type==='multi'?r.moves[0].day:r.day}
+    function rp(r){return r.type==='multi'?r.moves[0].period:(r.period||0)}
+    return S.records.slice().sort(function(a,b){return rd(a)-rd(b)||rp(a)-rp(b)||a.id-b.id});
+  }
+
+  /* ---------- DB lookups ---------- */
+  function hasDB(){return S.db.lessons.length>0}
+  function slotLessons(d,p){return S.db.lessons.filter(function(l){return l.d===d&&l.p===p})}
+  function findLesson(d,p,c){return slotLessons(d,p).filter(function(l){return l.c===c})[0]}
+  function dbTeachers(){return uniq(S.db.lessons.map(function(l){return l.t}))}
+  function allClasses(){
+    var a=S.db.lessons.map(function(l){return l.c}).concat(Object.keys(S.db.roster));
+    S.records.forEach(function(r){a.push(r.cls);if(r.oCls)a.push(r.oCls);(r.moves||[]).forEach(function(m){a.push(m.cls)})});
+    return uniq(a);
+  }
+  function allTeachers(){
+    var a=dbTeachers();
+    Object.keys(S.db.roster).forEach(function(k){a.push(S.db.roster[k])});
+    S.records.forEach(function(r){a.push(r.from);if(r.to)a.push(r.to);if(r.oTeacher)a.push(r.oTeacher);(r.moves||[]).forEach(function(m){a.push(m.from)})});
+    return uniq(a);
+  }
+  function allSubjects(){
+    var a=SUBJECTS.concat(S.db.lessons.map(function(l){return l.s}));
+    S.records.forEach(function(r){if(r.subj)a.push(r.subj);if(r.oSubj)a.push(r.oSubj);(r.moves||[]).forEach(function(m){a.push(m.subj)})});
+    return uniq(a);
+  }
+  function busyAtByRecords(d,p){
+    return S.records.filter(function(r){return r.type==='sub'&&r.day===d&&r.period===p&&r.id!==editingId}).map(function(r){return r.to});
+  }
+  function freeTeachers(d,p){
+    var busy={};
+    slotLessons(d,p).forEach(function(l){busy[l.t]=1});
+    busyAtByRecords(d,p).forEach(function(t){busy[t]=1});
+    return dbTeachers().filter(function(t){return !busy[t]});
+  }
+
+  /* ---------- build cells ---------- */
+  function buildCells(){
+    var m={};
+    function push(d,k,it){var key=d+'-'+k;(m[key]=m[key]||[]).push(it)}
+    sorted().forEach(function(r){
+      if(r.type==='sub'){
+        push(r.day,r.period,{type:'sub',before:{c:r.cls,s:r.subj,t:r.from},after:{c:r.cls,s:r.subj,t:r.to},note:''});
+      }else if(r.type==='multi'){
+        var org={},dst={};
+        r.moves.forEach(function(m){
+          var ML={c:m.cls,s:m.subj,t:m.from};
+          (org[m.day+'-'+m.period]=org[m.day+'-'+m.period]||[]).push({L:ML,to:slotName(m.nDay,m.nPeriod)});
+          (dst[m.nDay+'-'+m.nPeriod]=dst[m.nDay+'-'+m.nPeriod]||[]).push({L:ML,from:slotName(m.day,m.period)});
+        });
+        uniq(Object.keys(org).concat(Object.keys(dst))).forEach(function(k){
+          var o=org[k]||[],dd=dst[k]||[],n=Math.max(o.length,dd.length),pr=k.split('-');
+          for(var i=0;i<n;i++){
+            var b=o[i],a=dd[i];
+            var note=(a&&b)?'輪調（入自'+a.from+'／出至'+b.to+'）':(a?'調自'+a.from:'調至'+b.to);
+            push(+pr[0],+pr[1],{type:'multi',before:b?b.L:null,after:a?a.L:null,note:note});
+          }
+        });
+      }else if(r.type==='swap'){
+        var L={c:r.cls,s:r.subj,t:r.from};
+        var O=r.hasOther?{c:r.oCls,s:r.oSubj,t:r.oTeacher}:null;
+        var a=slotName(r.day,r.period), b=slotName(r.nDay,r.nPeriod);
+        push(r.day,r.period,{type:'swap',before:L,after:O,note:O?'與'+b+'對調':'調至'+b});
+        push(r.nDay,r.nPeriod,{type:'swap',before:O,after:L,note:O?'與'+a+'對調':'調自'+a});
+      }else{
+        push(r.day,r.type,{type:r.type,before:{c:r.cls,s:'',t:r.from},after:{c:r.cls,s:'',t:r.to},note:''});
+      }
+    });
+    return m;
+  }
+
+  /* ---------- render sheet ---------- */
+  function lessonLine(kind,l,ref){
+    var tag='<span class="tg '+(kind==='後'?'a':'')+'" title="異動'+kind+'">'+kind+'</span>';
+    if(!l)return '<div class="ln">'+tag+'<span class="v"><span class="empty">（空堂）</span></span></div>';
+    function f(k,v){return ref&&ref[k]!==l[k]?'<mark>'+esc(v)+'</mark>':esc(v)}
+    var parts='<span>'+f('c',l.c)+'</span>';
+    if(l.s)parts+='<span>'+f('s',l.s)+'</span>';
+    parts+='<span>'+f('t',l.t)+'</span>';
+    return '<div class="ln">'+tag+'<span class="v">'+parts+'</span></div>';
+  }
+  function itemHTML(it){
+    return '<div class="it '+(it.type==='multi'?'swap':it.type)+'"><div class="it-top"><span class="badge">'+LABEL[it.type]+'</span>'+
+      (it.note?'<span class="note-s">'+esc(it.note)+'</span>':'')+'</div>'+
+      lessonLine('前',it.before,null)+
+      lessonLine('後',it.after,(it.type==='swap'||it.type==='multi')?null:it.before)+'</div>';
+  }
+  function cellsRow(cells,key){
+    var h='';
+    for(var d=0;d<5;d++){h+='<td>'+((cells[d+'-'+key]||[]).map(itemHTML).join(''))+'</td>'}
+    return h;
+  }
+  function renderSheet(){
+    var st=S.settings, dates=weekDates(), n=rowCount(), cells=buildCells();
+    var made=st.made?parseISO(st.made):new Date();
+    var cnt={sub:0,swap:0,hr:0,lunch:0};
+    S.records.forEach(function(r){cnt[r.type==='multi'?'swap':r.type]++});
+    var h='';
+    h+=st.school?'<div class="sheet-school">'+esc(st.school)+'</div>':'<div class="sheet-school ph no-print">（尚未填寫學校名稱）</div>';
+    h+='<h2>課務異動週課表</h2>';
+    h+='<div class="meta"><span><b>異動週別：</b>'+roc(dates[0])+' 至 '+roc(dates[4])+'</span>'+
+       '<span><b>本週異動：</b>代課 '+cnt.sub+'、調課 '+cnt.swap+'、導師代課 '+cnt.hr+'、午休代課 '+cnt.lunch+'（筆）</span>'+
+       '<span><b>製表日期：</b>'+roc(made)+'</span>'+
+       (st.maker?'<span><b>製表人：</b>'+esc(st.maker)+'</span>':'')+'</div>';
+    h+='<table class="tt"><thead><tr><th class="pn">節次</th>';
+    dates.forEach(function(d,i){h+='<th>'+DAYS[i]+'<span class="d">'+(d.getMonth()+1)+'/'+d.getDate()+'</span></th>'});
+    h+='</tr></thead><tbody>';
+    h+='<tr class="hr-row"><th class="pn">導師<br>代課</th>'+cellsRow(cells,'hr')+'</tr>';
+    for(var p=1;p<=n;p++){
+      if(p===5)h+='<tr class="lunch"><th class="pn">午休<br>代課</th>'+cellsRow(cells,'lunch')+'</tr>';
+      h+='<tr><th class="pn">第'+p+'節</th>'+cellsRow(cells,p)+'</tr>';
+    }
+    h+='</tbody></table>';
+    h+='<div class="legend"><span>前＝異動前　後＝異動後　（顯示順序：班級　科目　教師）</span>'+
+       '<span><i class="sw sub"></i>代課</span><span><i class="sw swap"></i>調課</span>'+
+       '<span><i class="sw hr"></i>導師代課</span><span><i class="sw lunch"></i>午休代課</span>'+
+       '<span>空白格＝當節無異動</span></div>';
+    $('#sheet').innerHTML=h;
+  }
+
+  /* ---------- list ---------- */
+  function renderList(){
+    var ul=$('#list'), recs=sorted();
+    $('#emptyBox').hidden=recs.length>0;
+    $('#clearWrap').hidden=recs.length===0;
+    $('#count').textContent=recs.length?('共 '+recs.length+' 筆'):'';
+    ul.innerHTML=recs.map(function(r){
+      var main,sub='',pill='<span class="pill '+r.type+'">'+LABEL[r.type]+'</span>';
+      if(r.type==='multi'){
+        main=pill+r.moves.length+' 節輪調';
+        sub=r.moves.map(function(m){return esc(m.cls)+' '+esc(m.subj)+' '+esc(m.from)+'：'+esc(slotName(m.day,m.period))+' → '+esc(slotName(m.nDay,m.nPeriod))}).join('<br>');
+      }else if(r.type==='sub'){
+        main=pill+esc(slotName(r.day,r.period))+'　'+esc(r.cls)+' '+esc(r.subj);
+        sub=esc(r.from)+' → '+esc(r.to);
+      }else if(r.type==='swap'){
+        main=pill+esc(slotName(r.day,r.period))+' → '+esc(slotName(r.nDay,r.nPeriod));
+        sub=esc(r.cls)+' '+esc(r.subj)+' '+esc(r.from)+(r.hasOther?'　⇄　'+esc(r.oCls)+' '+esc(r.oSubj)+' '+esc(r.oTeacher):'（調到空堂）');
+      }else{
+        main=pill+esc(DAYS[r.day])+'　'+esc(r.cls);
+        sub='前：'+esc(r.from)+'　→　後：'+esc(r.to);
+      }
+      return '<li><div class="li-top"><div class="li-main"><div>'+main+'</div><div class="li-sub">'+sub+'</div></div>'+
+        '<div class="li-btns"><button class="btn small" data-act="edit" data-id="'+r.id+'" type="button">編輯</button>'+
+        '<button class="btn small danger" data-act="del" data-id="'+r.id+'" type="button">刪除</button></div></div></li>';
+    }).join('');
+  }
+
+  /* ---------- form refs ---------- */
+  var f={};
+  ['day','period','cls','subj','from','to','nday','nperiod','other','ocls','osubj','otc'].forEach(function(k){f[k]=$('#f-'+k)});
+
+  function fillDays(){
+    var dates=weekDates();
+    [f.day,f.nday].forEach(function(sel){
+      var cur=sel.value||'0';
+      sel.innerHTML=DAYS.map(function(n,i){return '<option value="'+i+'">'+n+'　'+(dates[i].getMonth()+1)+'/'+dates[i].getDate()+'</option>'}).join('');
+      sel.value=cur;
+    });
+  }
+  function fillPeriods(){
+    var n=rowCount();
+    [f.period,f.nperiod].forEach(function(sel){
+      var cur=sel.value||'1';
+      var h='';for(var p=1;p<=n;p++)h+='<option value="'+p+'">第'+p+'節</option>';
+      sel.innerHTML=h; sel.value=(+cur<=n)?cur:'1';
+    });
+  }
+
+  /* ---------- auto-fill & suggestions ---------- */
+  function setAuto(el,val){
+    var autoV=el.dataset.auto||'', cur=el.value.trim();
+    if(val==null||val===''){
+      if(autoV&&cur===autoV){el.value='';el.dataset.auto=''}
+      return;
+    }
+    if(cur===''||cur===autoV){el.value=val;el.dataset.auto=val}
+  }
+  function clearAuto(){['cls','subj','from','to','ocls','osubj','otc'].forEach(function(k){f[k].dataset.auto=''})}
+
+  function autoMain(){
+    if(!hasDB())return;
+    var d=+f.day.value,p=+f.period.value,c=f.cls.value.trim(),t=f.from.value.trim();
+    if(c){
+      var e=findLesson(d,p,c);
+      if(e){setAuto(f.subj,e.s);setAuto(f.from,e.t)}else{setAuto(f.subj,null);setAuto(f.from,null)}
+    }else if(t){
+      var es=slotLessons(d,p).filter(function(l){return l.t===t});
+      if(es.length===1){setAuto(f.cls,es[0].c);setAuto(f.subj,es[0].s)}
+    }
+  }
+  function autoOther(){
+    if(!f.other.checked)return;
+    setAuto(f.ocls,f.cls.value.trim()||null);
+    var oc=f.ocls.value.trim(),nd=+f.nday.value,np=+f.nperiod.value;
+    if(oc&&hasDB()){
+      var e=findLesson(nd,np,oc);
+      if(e){setAuto(f.osubj,e.s);setAuto(f.otc,e.t)}else{setAuto(f.osubj,null);setAuto(f.otc,null)}
+    }
+  }
+  function autoRoster(){
+    var c=f.cls.value.trim();
+    setAuto(f.from,S.db.roster[c]||null);
+  }
+
+  function optHTML(a){return a.map(function(v){return '<option value="'+esc(v)+'">'}).join('')}
+  function updateSuggest(){
+    var d=+f.day.value,p=+f.period.value,nd=+f.nday.value,np=+f.nperiod.value;
+    var slotMode=(curType==='sub'||curType==='swap')&&hasDB();
+    var here=slotMode?slotLessons(d,p):[];
+    var c=f.cls.value.trim();
+    $('#dl-cls').innerHTML=optHTML(uniq(here.map(function(l){return l.c}).concat(allClasses())));
+    $('#dl-ocls').innerHTML=optHTML(uniq((hasDB()?slotLessons(nd,np).map(function(l){return l.c}):[]).concat(allClasses())));
+    $('#dl-subj').innerHTML=optHTML(allSubjects());
+    var fromFirst;
+    if(slotMode){
+      var sel=c?here.filter(function(l){return l.c===c}):here;
+      fromFirst=sel.map(function(l){return l.t});
+    }else if(curType==='hr'||curType==='lunch'){
+      fromFirst=c&&S.db.roster[c]?[S.db.roster[c]]:[];
+    }else fromFirst=[];
+    $('#dl-from').innerHTML=optHTML(uniq(fromFirst.concat(allTeachers())));
+    var toList=allTeachers();
+    if(curType==='sub'&&hasDB()){var fr=freeTeachers(d,p);if(fr.length)toList=fr}
+    $('#dl-to').innerHTML=optHTML(toList);
+    $('#dl-tc').innerHTML=optHTML(allTeachers());
+  }
+
+  function updateHint(){
+    if(curType==='swap'&&curMode==='multi'){multiHint();return}
+    var out=[];
+    function add(k,t){out.push('<div class="'+k+'">'+esc(t)+'</div>')}
+    var d=+f.day.value,p=+f.period.value,nd=+f.nday.value,np=+f.nperiod.value;
+    var c=f.cls.value.trim(),from=f.from.value.trim(),to=f.to.value.trim();
+    if(curType==='sub'||curType==='swap'){
+      if(hasDB()&&c){
+        var e=findLesson(d,p,c);
+        if(e)add('ok','課表資料庫：'+slotName(d,p)+' '+c+'　'+e.s+'／'+e.t);
+        else add('mute','課表資料庫中沒有 '+slotName(d,p)+' '+c+' 的課，請手動填寫。');
+      }
+    }
+    if(curType==='sub'&&hasDB()&&to){
+      var busy=slotLessons(d,p).filter(function(l){return l.t===to})[0];
+      if(busy)add('warn','⚠ '+to+' 在'+slotName(d,p)+'原本要上 '+busy.c+' '+busy.s+'（衝堂）');
+      if(busyAtByRecords(d,p).indexOf(to)>=0)add('warn','⚠ '+to+' 在同一節已被安排代其他課');
+    }
+    if(curType==='swap'&&hasDB()){
+      var occ=c?findLesson(nd,np,c):null;
+      if(!f.other.checked&&occ)add('warn','⚠ '+c+' 在'+slotName(nd,np)+'原本有課（'+occ.s+'／'+occ.t+'），要不要勾選「雙方對調」？');
+      if(from){
+        var b2=slotLessons(nd,np).filter(function(l){return l.t===from})[0];
+        var swapOk=f.other.checked&&f.otc.value.trim()===from;
+        if(b2&&!swapOk)add('warn','⚠ '+from+' 在'+slotName(nd,np)+'原本有課（'+b2.c+' '+b2.s+'）');
+      }
+      if(f.other.checked){
+        var oc=f.ocls.value.trim();
+        if(oc){
+          var o=findLesson(nd,np,oc);
+          if(o)add('ok','課表資料庫：'+slotName(nd,np)+' '+oc+'　'+o.s+'／'+o.t);
+          else add('mute','課表資料庫中沒有 '+slotName(nd,np)+' '+oc+' 的課。');
+        }
+      }
+    }
+    if((curType==='hr'||curType==='lunch')&&c&&Object.keys(S.db.roster).length){
+      if(S.db.roster[c])add('ok','導師對照：'+c+'　'+S.db.roster[c]);
+      else add('mute','導師對照中沒有 '+c+'，請手動填寫。');
+    }
+    $('#hint').innerHTML=out.join('');
+  }
+
+  function renderDbLine(){
+    var el=$('#dbLine');
+    if(hasDB()){
+      el.innerHTML='已載入原課表（'+S.db.lessons.length+' 堂）：選好星期、節次、班級，會自動帶出科目與教師。 <button class="link" type="button" data-go="db">管理</button>';
+    }else{
+      el.innerHTML='尚未載入原課表資料庫（選填）。載入後可自動帶出科目、教師，並建議可代課人選。 <button class="link" type="button" data-go="db">前往設定</button>';
+    }
+  }
+  function renderDbStat(){
+    var n=S.db.lessons.length, r=Object.keys(S.db.roster).length;
+    var t=[];
+    if(n)t.push(n+' 堂・'+uniq(S.db.lessons.map(function(l){return l.c})).length+' 班・'+dbTeachers().length+' 位教師');
+    if(r)t.push('導師 '+r+' 班');
+    $('#dbStat').textContent=t.length?t.join('；'):'尚未載入';
+  }
+
+  /* ---------- form type ---------- */
+  function setType(t){
+    curType=t; var c=CFG[t];
+    document.querySelectorAll('.seg button').forEach(function(b){b.setAttribute('aria-pressed',String(b.dataset.t===t))});
+    $('#fldPeriod').hidden=!c.period; $('#rowDP').classList.toggle('one',!c.period);
+    $('#fldSubj').hidden=!c.subj;     $('#rowCS').classList.toggle('one',!c.subj);
+    $('#fldTo').hidden=!c.to;
+    document.querySelectorAll('.only-swap').forEach(function(e){e.hidden=!c.swap});
+    $('#gTitle').textContent=c.g; $('#lblCls').textContent=c.cls; $('#lblFrom').textContent=c.from;
+    if(c.to)$('#lblTo').textContent=c.to;
+    f.cls.placeholder=(t==='hr'||t==='lunch')?'例：三年甲班':'例：三年甲班';
+    $('#otherBox').hidden=!f.other.checked;
+    var multi=(t==='swap'&&curMode==='multi');
+    $('#modeRow').hidden=(t!=='swap');
+    $('#rowDP').hidden=multi; $('#rowCS').hidden=multi; $('#fldFrom').hidden=multi;
+    $('#twoWay').hidden=multi; $('#multiWay').hidden=!multi;
+    if(multi){$('#gTitle').textContent='多角調課：每一節課調到哪裡';if(!$('#mrows').children.length)renderMRows(blank3())}
+    if(t==='hr'||t==='lunch')autoRoster(); else autoMain();
+    updateSuggest(); updateHint();
+  }
+  function setErr(m){$('#err').textContent=m||''}
+
+  function resetForm(keepSlot){
+    ['cls','subj','from','to','ocls','osubj','otc'].forEach(function(k){f[k].value=''});
+    clearAuto(); renderMRows(blank3());
+    f.other.checked=false; $('#otherBox').hidden=true;
+    if(!keepSlot){f.day.value='0';f.period.value='1';f.nday.value='0';f.nperiod.value='1'}
+    editingId=null;
+    $('#btn-add').textContent='新增異動'; $('#btn-cancel').hidden=true; $('#addTitle').textContent='新增異動';
+    setErr('');
+  }
+
+  function submit(){
+    if(curType==='swap'&&curMode==='multi'){submitMulti();return}
+    function v(k){return f[k].value.trim()}
+    var rec;
+    if(!v('cls')||!v('from')){setErr('請填寫'+CFG[curType].cls+'與'+CFG[curType].from.replace(/^前：/,'')+'。');return}
+    if(curType==='sub'){
+      if(!v('subj')){setErr('請填寫科目。');return}
+      if(!v('to')){setErr('請填寫代課教師。');return}
+      if(v('to')===v('from')){setErr('代課教師與原授課教師相同，請確認。');return}
+      rec={type:'sub',day:+f.day.value,period:+f.period.value,cls:v('cls'),subj:v('subj'),from:v('from'),to:v('to')};
+    }else if(curType==='swap'){
+      if(!v('subj')){setErr('請填寫科目。');return}
+      if(f.day.value===f.nday.value&&f.period.value===f.nperiod.value){setErr('原時段與調整後時段相同，請確認。');return}
+      var has=f.other.checked;
+      if(has&&(!v('ocls')||!v('osubj')||!v('otc'))){setErr('請填寫新時段原有課程的班級、科目與教師。');return}
+      rec={type:'swap',day:+f.day.value,period:+f.period.value,cls:v('cls'),subj:v('subj'),from:v('from'),
+        nDay:+f.nday.value,nPeriod:+f.nperiod.value,hasOther:has,
+        oCls:has?v('ocls'):'',oSubj:has?v('osubj'):'',oTeacher:has?v('otc'):''};
+    }else{
+      if(!v('to')){setErr('請填寫'+CFG[curType].to.replace(/^後：/,'')+'。');return}
+      if(v('to')===v('from')){setErr('前後教師相同，請確認。');return}
+      rec={type:curType,day:+f.day.value,cls:v('cls'),from:v('from'),to:v('to')};
+    }
+    commit(rec);
+  }
+  function commit(rec){
+    if(editingId!=null){
+      rec.id=editingId;
+      S.records=S.records.map(function(r){return r.id===editingId?rec:r});
+      toast('已更新異動');
+    }else{
+      rec.id=S.seq++; S.records.push(rec); toast('已新增異動');
+    }
+    resetForm(true);
+    refresh();
+  }
+  function submitMulti(){
+    var rows=readMRows();
+    if(rows.length<3){setErr('多角調課至少需要 3 節課。');return}
+    for(var i=0;i<rows.length;i++){
+      var m=rows[i];
+      if(!m.cls||!m.subj||!m.from){setErr('第 '+(i+1)+' 列請填寫班級、科目與教師。');return}
+      if(m.day===m.nDay&&m.period===m.nPeriod){setErr('第 '+(i+1)+' 列的調整後時段與原時段相同。');return}
+    }
+    commit({type:'multi',moves:rows});
+  }
+
+  function startEdit(id){
+    var r=S.records.filter(function(x){return x.id===id})[0]; if(!r)return;
+    resetForm(true);
+    fillPeriods();
+    if(r.type==='multi'){
+      curMode='multi'; $('#f-mode').value='multi'; setType('swap'); renderMRows(r.moves);
+      editingId=id; setErr('');
+      $('#btn-add').textContent='更新異動'; $('#btn-cancel').hidden=false; $('#addTitle').textContent='編輯異動';
+      updateHint(); $('#addCard').scrollIntoView({behavior:'smooth',block:'start'});
+      return;
+    }
+    if(r.type==='swap'){curMode='two';$('#f-mode').value='two'}
+    setType(r.type);
+    f.day.value=r.day; f.cls.value=r.cls; f.from.value=r.from;
+    if(r.type==='sub'){f.period.value=r.period;f.subj.value=r.subj;f.to.value=r.to}
+    else if(r.type==='swap'){
+      f.period.value=r.period;f.subj.value=r.subj;
+      f.nday.value=r.nDay; f.nperiod.value=r.nPeriod; f.other.checked=!!r.hasOther;
+      f.ocls.value=r.oCls||''; f.osubj.value=r.oSubj||''; f.otc.value=r.oTeacher||'';
+      $('#otherBox').hidden=!r.hasOther;
+    }else{f.to.value=r.to}
+    editingId=id; setErr('');
+    $('#btn-add').textContent='更新異動'; $('#btn-cancel').hidden=false; $('#addTitle').textContent='編輯異動';
+    updateSuggest(); updateHint();
+    $('#addCard').scrollIntoView({behavior:'smooth',block:'start'});
+  }
+
+  function del(id){
+    var idx=-1;S.records.forEach(function(r,i){if(r.id===id)idx=i});
+    if(idx<0)return;
+    lastDeleted={rec:S.records[idx],idx:idx};
+    S.records.splice(idx,1);
+    if(editingId===id)resetForm(true);
+    refresh();
+    toast('已刪除一筆異動',function(){
+      if(lastDeleted){S.records.splice(Math.min(lastDeleted.idx,S.records.length),0,lastDeleted.rec);lastDeleted=null;refresh()}
+    });
+  }
+
+  /* ---------- toast ---------- */
+  var toastT;
+  function toast(msg,undo){
+    var t=$('#toast'); t.innerHTML='';
+    var s=document.createElement('span'); s.textContent=msg; t.appendChild(s);
+    if(undo){
+      var b=document.createElement('button'); b.type='button'; b.textContent='復原';
+      b.onclick=function(){undo();t.classList.remove('show')}; t.appendChild(b);
+    }
+    t.classList.add('show'); clearTimeout(toastT);
+    toastT=setTimeout(function(){t.classList.remove('show')},undo?6000:3000);
+  }
+
+  /* ---------- refresh ---------- */
+  function refresh(){
+    fillPeriods(); if(curType==='swap'&&curMode==='multi')renderMRows(readMRows()); renderSheet(); renderList(); updateSuggest(); updateHint(); renderDbLine(); renderDbStat(); save();
+  }
+  function syncInputs(){
+    $('#s-school').value=S.settings.school;
+    $('#s-maker').value=S.settings.maker;
+    $('#s-anchor').value=S.settings.anchor;
+    $('#s-made').value=S.settings.made||toISO(new Date());
+    $('#s-periods').value=String(S.settings.periods);
+    fillDays();
+  }
+
+  /* ---------- table parsing (原課表資料庫) ---------- */
+  function splitLine(l,dl){
+    var out=[],cur='',q=false;
+    for(var i=0;i<l.length;i++){
+      var ch=l[i];
+      if(q){ if(ch==='"'){ if(l[i+1]==='"'){cur+='"';i++} else q=false } else cur+=ch }
+      else if(ch==='"')q=true;
+      else if(ch===dl){out.push(cur.trim());cur=''}
+      else cur+=ch;
+    }
+    out.push(cur.trim()); return out;
+  }
+  function parseRows(text){
+    text=String(text).replace(/^\uFEFF/,'');
+    return text.split(/\r?\n/).filter(function(l){return l.trim()!==''}).map(function(l){
+      var dl=l.indexOf('\t')>=0?'\t':(l.indexOf(',')>=0?',':(l.indexOf('，')>=0?'，':','));
+      return splitLine(l,dl);
+    });
+  }
+  function parseDay(s){
+    s=String(s);var m=s.match(/[一二三四五]/);
+    if(m)return '一二三四五'.indexOf(m[0]);
+    var n=s.match(/[1-5]/); if(n)return +n[0]-1;
+    return -1;
+  }
+  function parsePeriod(s){var m=String(s).match(/\d+/);var n=m?+m[0]:0;return (n>=1&&n<=8)?n:0}
+  function parseLessons(text){
+    var rows=parseRows(text); if(!rows.length)return {err:'沒有讀到任何資料。'};
+    var idx={d:0,p:1,c:2,s:3,t:4}, start=0, head=rows[0];
+    var isHead=parseDay(head[0])<0;
+    if(isHead){
+      start=1; var map={};
+      head.forEach(function(x,i){
+        if(/星期|週|日/.test(x)&&map.d==null)map.d=i;
+        else if(/節/.test(x)&&map.p==null)map.p=i;
+        else if(/班/.test(x)&&map.c==null)map.c=i;
+        else if(/科目|課程|領域/.test(x)&&map.s==null)map.s=i;
+        else if(/教師|老師/.test(x)&&map.t==null)map.t=i;
+      });
+      var miss=[];['d','p','c','t'].forEach(function(k){if(map[k]==null)miss.push({d:'星期',p:'節次',c:'班級',t:'教師'}[k])});
+      if(miss.length)return {err:'找不到欄位：'+miss.join('、')+'。請確認標題列。'};
+      idx={d:map.d,p:map.p,c:map.c,s:map.s==null?-1:map.s,t:map.t};
+    }
+    var out=[],skip=0,seen={};
+    for(var i=start;i<rows.length;i++){
+      var r=rows[i];
+      var d=parseDay(r[idx.d]),p=parsePeriod(r[idx.p]),c=str(r[idx.c]),t=str(r[idx.t]),s=idx.s>=0?str(r[idx.s]):'';
+      if(d<0||!p||!c||!t){skip++;continue}
+      var k=[d,p,c,s,t].join('|'); if(seen[k])continue; seen[k]=1;
+      out.push({d:d,p:p,c:c,s:s,t:t});
+    }
+    if(!out.length)return {err:'沒有可用的資料列，請確認格式。'};
+    return {lessons:out,skip:skip};
+  }
+  function readFileText(file,cb){
+    var fr=new FileReader();
+    fr.onload=function(){
+      var buf=fr.result,txt;
+      try{txt=new TextDecoder('utf-8',{fatal:true}).decode(buf)}
+      catch(e){try{txt=new TextDecoder('big5').decode(buf)}catch(e2){txt=new TextDecoder('utf-8').decode(buf)}}
+      cb(txt);
+    };
+    fr.onerror=function(){toast('讀取檔案失敗')};
+    fr.readAsArrayBuffer(file);
+  }
+  function loadLessonsFromText(text){
+    var res=parseLessons(text);
+    if(res.err){toast(res.err);return}
+    S.db.lessons=res.lessons;
+    refresh();
+    toast('已載入 '+res.lessons.length+' 堂課'+(res.skip?'（略過 '+res.skip+' 列無法辨識）':''));
+  }
+  function loadRoster(text){
+    var rows=parseRows(text),o={},n=0;
+    rows.forEach(function(r,i){
+      if(i===0&&/班級/.test(r[0]||''))return;
+      var c=str(r[0]),t=str(r[1]);
+      if(c&&t){o[c]=t;n++}
+    });
+    if(!n){toast('沒有讀到導師對照，格式：班級,導師');return}
+    S.db.roster=o; refresh(); toast('已載入 '+n+' 班導師');
+  }
+
+  /* ---------- export / import ---------- */
+  function packState(withDb){
+    var o={app:'class-change-tool',version:2,exportedAt:new Date().toISOString(),settings:S.settings,records:S.records};
+    if(withDb)o.db=S.db;
+    return JSON.stringify(o,null,1);
+  }
+  function download(name,text){
+    try{
+      var blob=new Blob([text],{type:'application/json'});
+      var a=document.createElement('a');
+      a.href=URL.createObjectURL(blob); a.download=name;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function(){URL.revokeObjectURL(a.href)},1500);
+      return true;
+    }catch(e){return false}
+  }
+  function copyText(text){
+    var ta=$('#ex-text'); ta.value=text; ta.focus(); ta.select();
+    try{
+      if(navigator.clipboard&&navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(function(){toast('已複製暫存內容')},function(){
+          var ok=false;try{ok=document.execCommand('copy')}catch(e){}
+          toast(ok?'已複製暫存內容':'請按 Ctrl / ⌘ + C 複製下方內容');
+        });
+        return;
+      }
+    }catch(e){}
+    var ok2=false;try{ok2=document.execCommand('copy')}catch(e){}
+    toast(ok2?'已複製暫存內容':'請按 Ctrl / ⌘ + C 複製下方內容');
+  }
+  function sig(r){return Object.keys(r).filter(function(k){return k!=='id'}).sort().map(function(k){return k+':'+JSON.stringify(r[k])}).join('|')}
+  function stageImport(text){
+    var p;
+    try{p=JSON.parse(text)}catch(e){toast('無法讀取：內容不是有效的暫存檔');return}
+    if(!p||p.app!=='class-change-tool'||!Array.isArray(p.records)){toast('這不是本工具的暫存檔');return}
+    var recs=p.records.map(sanitizeRecord).filter(Boolean);
+    var db=null;
+    if(p.db&&Array.isArray(p.db.lessons))db={lessons:p.db.lessons.map(cleanLesson).filter(Boolean),roster:cleanRoster(p.db.roster)};
+    pending={settings:(p.settings&&typeof p.settings==='object')?pickSettings(p.settings):null,records:recs,db:db};
+    var wk=pending.settings?'，週別 '+pending.settings.anchor+' 所在週':'';
+    $('#importSum').textContent='暫存檔內容：'+recs.length+' 筆異動'+wk+(db?'，原課表 '+db.lessons.length+' 堂、導師 '+Object.keys(db.roster).length+' 班':'')+'。要如何匯入？';
+    $('#importBox').hidden=false;
+  }
+  function doImport(mode){
+    if(!pending)return;
+    if(mode==='replace'){
+      if(pending.settings)S.settings=pending.settings;
+      S.records=[];
+      pending.records.forEach(function(r){r.id=S.seq++;S.records.push(r)});
+      if(pending.db)S.db=pending.db;
+      resetForm(false);
+    }else{
+      var seen={};S.records.forEach(function(r){seen[sig(r)]=1});
+      var added=0;
+      pending.records.forEach(function(r){var k=sig(r);if(!seen[k]){seen[k]=1;r.id=S.seq++;S.records.push(r);added++}});
+      if(pending.db){
+        if(!S.db.lessons.length)S.db.lessons=pending.db.lessons;
+        Object.keys(pending.db.roster).forEach(function(k){if(!S.db.roster[k])S.db.roster[k]=pending.db.roster[k]});
+      }
+      toast('已合併，新增 '+added+' 筆異動');
+    }
+    pending=null;$('#importBox').hidden=true;
+    syncInputs(); refresh();
+    if(mode==='replace')toast('已匯入暫存檔');
+  }
+
+  /* ---------- sample ---------- */
+  function sample(){
+    if(!hasDB()){
+      var L=[[0,1,'三年甲班','國語','陳雅文'],[1,1,'三年甲班','國語','陳雅文'],[0,2,'三年甲班','數學','王美玲'],
+        [2,3,'五年乙班','自然科學','林建宏'],[0,3,'五年乙班','社會','周明哲'],[2,1,'五年乙班','數學','黃雅婷'],
+        [1,3,'二年甲班','體育','李大偉'],[3,2,'二年甲班','音樂','吳佩珊'],[1,2,'二年甲班','國語','張淑芬'],
+        [4,2,'六年丁班','英語','鄭怡君'],[0,4,'四年丙班','數學','陳志豪'],[3,1,'四年丙班','社會','許志強'],[1,4,'四年丙班','國語','吳佩珊']];
+      S.db.lessons=L.map(function(a){return {d:a[0],p:a[1],c:a[2],s:a[3],t:a[4]}});
+      S.db.roster={'三年甲班':'陳雅文','二年甲班':'張淑芬','五年乙班':'周明哲','六年丁班':'鄭怡君'};
+    }
+    var base=[
+      {type:'sub',day:0,period:2,cls:'三年甲班',subj:'數學',from:'王美玲',to:'陳志豪'},
+      {type:'sub',day:2,period:3,cls:'五年乙班',subj:'自然科學',from:'林建宏',to:'黃雅婷'},
+      {type:'swap',day:1,period:3,cls:'二年甲班',subj:'體育',from:'李大偉',nDay:3,nPeriod:2,hasOther:true,oCls:'二年甲班',oSubj:'音樂',oTeacher:'吳佩珊'},
+      {type:'swap',day:4,period:2,cls:'六年丁班',subj:'英語',from:'鄭怡君',nDay:3,nPeriod:5,hasOther:false,oCls:'',oSubj:'',oTeacher:''},
+      {type:'hr',day:2,cls:'三年甲班',from:'陳雅文',to:'許志強'},
+      {type:'lunch',day:3,cls:'五年乙班',from:'周明哲',to:'林建宏'},
+      {type:'multi',moves:[
+        {day:0,period:4,cls:'四年丙班',subj:'數學',from:'陳志豪',nDay:1,nPeriod:4},
+        {day:1,period:4,cls:'四年丙班',subj:'國語',from:'吳佩珊',nDay:3,nPeriod:1},
+        {day:3,period:1,cls:'四年丙班',subj:'社會',from:'許志強',nDay:0,nPeriod:4}]}
+    ];
+    base.forEach(function(r){r.id=S.seq++;S.records.push(r)});
+    refresh();
+  }
+
+  /* ---------- multi-way swap rows ---------- */
+  function blank3(){var a=[];for(var i=0;i<3;i++)a.push({day:0,period:1,cls:'',subj:'',from:'',nDay:0,nPeriod:1});return a}
+  function dayOpts(sel){var dates=weekDates();return DAYS.map(function(n,i){return '<option value="'+i+'"'+(i===sel?' selected':'')+'>'+n+'　'+(dates[i].getMonth()+1)+'/'+dates[i].getDate()+'</option>'}).join('')}
+  function perOpts(sel){var n=rowCount(),h='';for(var p=1;p<=n;p++)h+='<option value="'+p+'"'+(p===sel?' selected':'')+'>第'+p+'節</option>';return h}
+  function mrowHTML(i,r,canDel){
+    return '<div class="mrow"><div class="mrow-h"><span>第 '+(i+1)+' 節課（原時段）</span>'+(canDel?'<button class="btn small danger m-del" type="button">移除</button>':'')+'</div>'+
+      '<div class="grid2"><select class="m-day" aria-label="原星期">'+dayOpts(r.day)+'</select><select class="m-period" aria-label="原節次">'+perOpts(r.period)+'</select></div>'+
+      '<div class="grid2"><input type="text" class="m-cls" list="dl-cls" placeholder="班級" value="'+esc(r.cls)+'" autocomplete="off"><input type="text" class="m-subj" list="dl-subj" placeholder="科目" value="'+esc(r.subj)+'" autocomplete="off"></div>'+
+      '<div class="field" style="margin-bottom:6px"><input type="text" class="m-tc" list="dl-tc" placeholder="授課教師" value="'+esc(r.from)+'" autocomplete="off"></div>'+
+      '<div class="arrow">↓ 調至</div>'+
+      '<div class="grid2"><select class="m-nday" aria-label="新星期">'+dayOpts(r.nDay)+'</select><select class="m-nperiod" aria-label="新節次">'+perOpts(r.nPeriod)+'</select></div></div>';
+  }
+  function renderMRows(rows){$('#mrows').innerHTML=rows.map(function(r,i){return mrowHTML(i,r,rows.length>3)}).join('')}
+  function readMRows(){
+    return [].map.call(document.querySelectorAll('#mrows .mrow'),function(el){
+      function g(c){return el.querySelector('.'+c).value.trim()}
+      return {day:+g('m-day'),period:+g('m-period'),cls:g('m-cls'),subj:g('m-subj'),from:g('m-tc'),nDay:+g('m-nday'),nPeriod:+g('m-nperiod')};
+    });
+  }
+  function multiHint(){
+    var rows=readMRows(),out=[],org={},dst={};
+    function add(k,t){out.push('<div class="'+k+'">'+esc(t)+'</div>')}
+    rows.forEach(function(m){org[m.day+'-'+m.period+'-'+m.cls]=1});
+    rows.forEach(function(m,i){
+      if(!m.cls)return;
+      var k=m.nDay+'-'+m.nPeriod+'-'+m.cls;
+      if(dst[k])add('warn','⚠ 第 '+dst[k]+' 列與第 '+(i+1)+' 列調到同一個時段');
+      dst[k]=i+1;
+      if(hasDB()){
+        if(!findLesson(m.day,m.period,m.cls))add('mute','第 '+(i+1)+' 列：課表資料庫中沒有 '+slotName(m.day,m.period)+' '+m.cls+' 的課');
+        if(!org[k]&&findLesson(m.nDay,m.nPeriod,m.cls))add('warn','⚠ 第 '+(i+1)+' 列：'+slotName(m.nDay,m.nPeriod)+' '+m.cls+' 原本有課，且沒有被這次調課調走');
+      }
+    });
+    $('#hint').innerHTML=out.join('');
+  }
+  function onMRow(e){
+    var row=e.target.closest&&e.target.closest('.mrow'); if(!row)return;
+    var t=e.target;
+    if(hasDB()&&(t.classList.contains('m-day')||t.classList.contains('m-period')||t.classList.contains('m-cls'))){
+      var c=row.querySelector('.m-cls').value.trim();
+      if(c){
+        var l=findLesson(+row.querySelector('.m-day').value,+row.querySelector('.m-period').value,c);
+        setAuto(row.querySelector('.m-subj'),l?l.s:null); setAuto(row.querySelector('.m-tc'),l?l.t:null);
+      }
+    }
+    updateHint();
+  }
+
+  /* ---------- wiring ---------- */
+  syncInputs();
+  $('#s-school').addEventListener('input',function(e){S.settings.school=e.target.value.trim();renderSheet();save()});
+  $('#s-maker').addEventListener('input',function(e){S.settings.maker=e.target.value.trim();renderSheet();save()});
+  $('#s-made').addEventListener('input',function(e){S.settings.made=e.target.value;renderSheet();save()});
+  $('#s-anchor').addEventListener('input',function(e){
+    if(!e.target.value)return;
+    S.settings.anchor=e.target.value; fillDays(); renderMRows(readMRows()); renderSheet(); save();
+  });
+  $('#s-periods').addEventListener('change',function(e){S.settings.periods=+e.target.value;refresh()});
+
+  document.querySelectorAll('.seg button').forEach(function(b){b.addEventListener('click',function(){setType(b.dataset.t);setErr('')})});
+  function onFormChange(e){
+    var t=e.target; if(!t||!t.id||t.id.indexOf('f-')!==0)return;
+    var k=t.id.slice(2);
+    if(curType==='sub'||curType==='swap'){
+      if(['day','period','cls','from'].indexOf(k)>=0)autoMain();
+      if(curType==='swap'&&['day','period','cls','nday','nperiod','other','ocls'].indexOf(k)>=0)autoOther();
+    }else if(k==='cls')autoRoster();
+    if(k==='other')$('#otherBox').hidden=!f.other.checked;
+    updateSuggest(); updateHint();
+  }
+  ['input','change'].forEach(function(ev){$('#addCard').addEventListener(ev,onFormChange)});
+  $('#btn-add').addEventListener('click',submit);
+  $('#f-mode').addEventListener('change',function(e){curMode=e.target.value;setType('swap');setErr('')});
+  ['input','change'].forEach(function(ev){$('#mrows').addEventListener(ev,onMRow)});
+  $('#mrows').addEventListener('click',function(e){
+    var b=e.target.closest('.m-del'); if(!b)return;
+    var rows=readMRows(),idx=[].indexOf.call(document.querySelectorAll('#mrows .mrow'),b.closest('.mrow'));
+    if(rows.length>3){rows.splice(idx,1);renderMRows(rows);updateHint()}
+  });
+  $('#m-add').addEventListener('click',function(){
+    var rows=readMRows();
+    if(rows.length>=8){toast('最多 8 節課');return}
+    rows.push({day:0,period:1,cls:'',subj:'',from:'',nDay:0,nPeriod:1});renderMRows(rows);
+  });
+  $('#m-cycle').addEventListener('click',function(){
+    var rows=readMRows();
+    rows.forEach(function(r,i){var nx=rows[(i+1)%rows.length];r.nDay=nx.day;r.nPeriod=nx.period});
+    renderMRows(rows);updateHint();toast('已依序接成一圈：每節課調到下一列的原時段，最後一列調回第 1 列');
+  });
+  $('#btn-cancel').addEventListener('click',function(){resetForm(false);setType(curType)});
+  $('#addCard').addEventListener('keydown',function(e){
+    if(e.key==='Enter'&&e.target.tagName==='INPUT'&&e.target.type==='text'){e.preventDefault();submit()}
+  });
+  $('#addCard').addEventListener('click',function(e){
+    if(e.target.dataset&&e.target.dataset.go==='db'){var d=$('#dbCard');d.open=true;d.scrollIntoView({behavior:'smooth',block:'start'})}
+  });
+  $('#list').addEventListener('click',function(e){
+    var b=e.target.closest('button[data-act]'); if(!b)return;
+    var id=+b.dataset.id;
+    if(b.dataset.act==='edit')startEdit(id); else del(id);
+  });
+  $('#btn-sample').addEventListener('click',sample);
+  $('#btn-clear').addEventListener('click',function(){
+    var b=$('#btn-clear');
+    if(!clearArmed){
+      clearArmed=true;b.textContent='再按一次確認清除';
+      clearTimeout(clearT);clearT=setTimeout(function(){clearArmed=false;b.textContent='清除全部異動'},3500);
+    }else{
+      clearArmed=false;clearTimeout(clearT);b.textContent='清除全部異動';
+      S.records=[];resetForm(false);refresh();toast('已清除全部異動');
+    }
+  });
+  $('#btn-print').addEventListener('click',function(){
+    try{window.print()}catch(e){toast('請改用瀏覽器的列印功能（Ctrl / ⌘ + P）')}
+  });
+
+  /* DB card */
+  $('#db-load').addEventListener('click',function(){loadLessonsFromText($('#db-text').value)});
+  $('#db-file-btn').addEventListener('click',function(){$('#db-file').click()});
+  $('#db-file').addEventListener('change',function(e){
+    var file=e.target.files&&e.target.files[0]; if(!file)return;
+    readFileText(file,function(txt){$('#db-text').value=txt;loadLessonsFromText(txt)});
+    e.target.value='';
+  });
+  $('#db-tpl').addEventListener('click',function(){
+    $('#db-text').value='星期,節次,班級,科目,教師\n週一,1,三年甲班,國語,王大明\n週一,2,三年甲班,數學,李美華\n週二,1,三年甲班,國語,王大明';
+  });
+  $('#roster-load').addEventListener('click',function(){loadRoster($('#db-roster').value)});
+  $('#db-clear').addEventListener('click',function(){
+    S.db={lessons:[],roster:{}};refresh();toast('已清除課表資料庫');
+  });
+
+  /* export / import */
+  $('#ex-dl').addEventListener('click',function(){
+    var text=packState($('#ex-db').checked);
+    $('#ex-text').value=text;
+    var ok=download('課務異動暫存_'+toISO(weekDates()[0])+'.json',text);
+    toast(ok?'已產生暫存檔（若沒有下載，請改用「複製暫存內容」）':'無法下載，請改用「複製暫存內容」');
+  });
+  $('#ex-copy').addEventListener('click',function(){copyText(packState($('#ex-db').checked))});
+  $('#in-file-btn').addEventListener('click',function(){$('#in-file').click()});
+  $('#in-file').addEventListener('change',function(e){
+    var file=e.target.files&&e.target.files[0]; if(!file)return;
+    var fr=new FileReader();
+    fr.onload=function(){$('#ex-text').value=String(fr.result);stageImport(String(fr.result))};
+    fr.onerror=function(){toast('讀取檔案失敗')};
+    fr.readAsText(file,'utf-8');
+    e.target.value='';
+  });
+  $('#in-paste').addEventListener('click',function(){
+    var t=$('#ex-text').value.trim();
+    if(!t){toast('請先貼上暫存內容');return}
+    stageImport(t);
+  });
+  $('#im-replace').addEventListener('click',function(){doImport('replace')});
+  $('#im-merge').addEventListener('click',function(){doImport('merge')});
+  $('#im-cancel').addEventListener('click',function(){pending=null;$('#importBox').hidden=true});
+
+  fillPeriods(); setType('sub'); refresh();
+})();
+</script>
+</body>
+</html>
